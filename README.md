@@ -1,63 +1,136 @@
-Stock Data Intelligence Dashboard
+# 📈 Stock Data Intelligence Dashboard
+### Jarnox Software Internship Assignment
 
-Jarnox Software Internship Assignment
-Author: Arpan Chakraborty
+**Author:** Arpan Chakraborty  
+**Live Demo:** [https://stock-dashboard-8ovm.onrender.com](https://stock-dashboard-8ovm.onrender.com)  
+**API Docs:** [https://stock-dashboard-8ovm.onrender.com/docs](https://stock-dashboard-8ovm.onrender.com/docs)
 
-A mini financial data platform that collects, processes, and visualizes NSE stock market data through a REST API and interactive dashboard.
+---
 
-Tech Stack
+## 🧠 Overview
 
-Language: Python 3.11+
-Backend: FastAPI
-Data Processing: Pandas, NumPy
-Frontend: HTML + JavaScript + Chart.js
-API Docs: Swagger UI at /docs
+A mini financial data platform that collects, processes, and visualizes **NSE stock market data** through a REST API and an interactive dark-theme dashboard. Built as a complete, production-ready application with real financial metrics and multi-stock analysis capabilities.
 
-Setup and Run
+---
 
-Clone the repository:
-git clone https://github.com/ArpanC8/stock-dashboard.git
+## ⚙️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Language | Python 3.11+ |
+| Backend | FastAPI |
+| Data Processing | Pandas, NumPy |
+| Frontend | HTML + JavaScript + Chart.js |
+| API Documentation | Swagger UI (`/docs`) |
+| Deployment | Render.com |
+
+---
+
+## 🚀 Setup and Run Locally
+
+**1. Clone the repository**
+```bash
+git clone https://github.com/ArpanC6/stock-dashboard.git
 cd stock-dashboard
+```
 
-Create virtual environment:
+**2. Create and activate virtual environment**
+```bash
 python -m venv venv
-venv\Scripts\activate
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # Mac/Linux
+```
 
-Install dependencies:
+**3. Install dependencies**
+```bash
 pip install -r requirements.txt
+```
 
-Run the server:
+**4. Run the server**
+```bash
 uvicorn main:app --reload
+```
 
-Open in browser:
-Dashboard: http://localhost:8000
-API Docs: http://localhost:8000/docs
+**5. Open in browser**
+- Dashboard → http://localhost:8000
+- API Docs (Swagger) → http://localhost:8000/docs
 
-API Endpoints
+---
 
-GET /companies - List of all NSE companies
-GET /data/{symbol}?days=30 - Last N days of stock data
-GET /summary/{symbol} - 52-week high, low, and average
-GET /compare?symbol1=INFY&symbol2=TCS - Compare two stocks
-GET /gainers-losers?days=7 - Top gainers and losers
-GET /volatility - Volatility scores for all stocks
-GET /correlation?symbol1=INFY&symbol2=TCS - Correlation between two stocks
+## 🔌 API Endpoints
 
-Data and Metrics
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/companies` | List of all NSE companies |
+| `GET` | `/data/{symbol}?days=30` | Last N days of stock data |
+| `GET` | `/summary/{symbol}` | 52-week high, low, and average |
+| `GET` | `/compare?symbol1=INFY&symbol2=TCS` | Side-by-side comparison of two stocks |
+| `GET` | `/gainers-losers?days=7` | Top gainers and losers |
+| `GET` | `/volatility` | Volatility scores for all stocks |
+| `GET` | `/correlation?symbol1=INFY&symbol2=TCS` | Correlation coefficient between two stocks |
 
-Daily Return = (Close - Open) / Open x 100
-7-day and 20-day Moving Average
-52-week High and Low
-Volatility Score: 14-day rolling standard deviation of returns
-Sentiment Index: combination of price momentum and volume trend
+> Full interactive API documentation available at `/docs` (Swagger UI)
 
-Dashboard Features
+---
 
-Overview Tab: Price chart with MA7 overlay, daily return bars, key stats
-Compare Tab: Side by side chart of two stocks with correlation analysis
-Market View Tab: Top gainers and losers, volatility comparison chart
+## 📊 Data & Metrics
 
-Submission
+| Metric | Formula / Description |
+|---|---|
+| **Daily Return** | `(Close - Open) / Open × 100` |
+| **Moving Average** | 7-day and 20-day rolling average |
+| **52-week High/Low** | Annual price range per stock |
+| **Volatility Score** | 14-day rolling standard deviation of returns |
+| **Sentiment Index** | Combination of price momentum and volume trend |
 
-GitHub: https://github.com/ArpanC8/stock-dashboard
-Email: support@jarnox.com
+---
+
+## 🖥️ Dashboard Features
+
+**Overview Tab**
+- Interactive price chart with MA7 overlay
+- Daily return bar chart
+- Key stats: 52-week high/low, average, volatility
+
+**Compare Tab**
+- Side-by-side price chart of two stocks
+- Correlation analysis with score display
+
+**Market View Tab**
+- Top gainers and losers (last 7 days)
+- Volatility comparison chart across all stocks
+
+---
+
+## 📁 Project Structure
+
+```
+stock-dashboard/
+├── main.py           # FastAPI app and all API endpoints
+├── data_engine.py    # Data processing and metrics computation
+├── templates/
+│   └── index.html    # Interactive dark-theme dashboard
+├── requirements.txt  # Python dependencies
+└── README.md
+```
+
+---
+
+## 🌐 Deployment
+
+This project is deployed live on **Render.com** (free tier).
+
+> ⚠️ Note: Free instances spin down after inactivity. The first request may take up to 50 seconds to load.
+
+- **Live URL:** https://stock-dashboard-8ovm.onrender.com
+- **API Docs:** https://stock-dashboard-8ovm.onrender.com/docs
+
+---
+
+## 📬 Submission
+
+| | |
+|---|---|
+| **GitHub** | https://github.com/ArpanC6/stock-dashboard |
+| **Submitted to** | support@jarnox.com |
+| **Author** | Arpan Chakraborty |

@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>📈 Stock Data Intelligence Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3"></script>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --surface2: #21262d;
+    --border: #30363d; --text: #e6edf3; --muted: #8b949e;
+    --green: #3fb950; --red: #f85149; --blue: #58a6ff;
+    --yellow: #d29922; --purple: #a371f7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; overflow: hidden; }
+
+  /* Sidebar */
+  #sidebar { width: 220px; min-width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  #sidebar h2 { padding: 18px 16px 12px; font-size: 15px; color: var(--blue); border-bottom: 1px solid var(--border); }
+  #company-list { overflow-y: auto; flex: 1; }
+  .company-item { padding: 10px 16px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  .company-item:hover, .company-item.active { background: var(--surface2); border-left: 3px solid var(--blue); }
+  .company-item .sym { font-weight: 700; font-size: 13px; color: var(--blue); }
+  .company-item .name { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Main */
+  #main { flex: 1; overflow-y: auto; padding: 20px; }
+  #header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  #header h1 { font-size: 20px; }
+  #header span { font-size: 12px; color: var(--muted); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .tab { padding: 7px 16px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 13px; color: var(--muted); transition: all 0.15s; }
+  .tab.active, .tab:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+  /* Stats Cards */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+  .stat-card .label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .stat-card .value { font-size: 18px; font-weight: 700; }
+  .stat-card .sub { font-size: 11px; margin-top: 3px; }
+  .green { color: var(--green); } .red { color: var(--red); } .blue { color: var(--blue); } .yellow { color: var(--yellow); } .purple { color: var(--purple); }
+
+  /* Chart */
+  .chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+  .chart-box h3 { font-size: 14px; color: var(--muted); margin-bottom: 12px; }
+  .chart-controls { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .btn { padding: 5px 12px; border-radius: 5px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); cursor: pointer; font-size: 12px; }
+  .btn.active, .btn:hover { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+  /* Compare / Gainers */
+  .compare-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .compare-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+  .compare-card h4 { font-size: 13px; margin-bottom: 10px; color: var(--muted); }
+  select, input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 5px; padding: 6px 10px; font-size: 13px; }
+  .run-btn { background: var(--blue); border: none; color: #fff; padding: 7px 18px; border-radius: 5px; cursor: pointer; font-size: 13px; margin-top: 8px; }
+
+  .gl-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .gl-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+  .gl-card h4 { font-size: 13px; margin-bottom: 10px; }
+  .gl-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .gl-item:last-child { border: none; }
+
+  #loading { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, var(--blue), var(--purple)); animation: load 1s infinite; }
+  @keyframes load { 0%{width:0%} 100%{width:100%} }
+  canvas { max-height: 300px; }
+</style>
+</head>
+<body>
+<div id="loading"></div>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <h2>📈 NSE Stocks</h2>
+  <div id="company-list">Loading...</div>
+</div>
+
+<!-- Main Content -->
+<div id="main">
+  <div id="header">
+    <h1 id="stock-title">Select a stock →</h1>
+    <span id="last-updated"></span>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('overview')">Overview</div>
+    <div class="tab" onclick="switchTab('compare')">Compare</div>
+    <div class="tab" onclick="switchTab('market')">Market View</div>
+  </div>
+
+  <!-- OVERVIEW TAB -->
+  <div id="tab-overview">
+    <div class="stats-grid" id="stats-grid"></div>
+    <div class="chart-box">
+      <h3>Price Chart</h3>
+      <div class="chart-controls">
+        <button class="btn active" onclick="loadChart(30, this)">30D</button>
+        <button class="btn" onclick="loadChart(90, this)">90D</button>
+        <button class="btn" onclick="loadChart(180, this)">180D</button>
+        <button class="btn" onclick="loadChart(365, this)">1Y</button>
+      </div>
+      <canvas id="priceChart"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>Daily Return %</h3>
+      <canvas id="returnChart"></canvas>
+    </div>
+  </div>
+
+  <!-- COMPARE TAB -->
+  <div id="tab-compare" style="display:none">
+    <div class="compare-card" style="margin-bottom:16px">
+      <h4>Compare Two Stocks</h4>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <select id="cmp1"></select>
+        <span style="color:var(--muted)">vs</span>
+        <select id="cmp2"></select>
+        <select id="cmpDays">
+          <option value="30">30 Days</option>
+          <option value="90">90 Days</option>
+          <option value="180">180 Days</option>
+        </select>
+        <button class="run-btn" onclick="runCompare()">Compare</button>
+      </div>
+    </div>
+    <div class="chart-box">
+      <h3 id="cmpTitle">Comparison Chart</h3>
+      <canvas id="compareChart"></canvas>
+    </div>
+    <div class="compare-row" id="cmp-stats"></div>
+    <div id="corr-box"></div>
+  </div>
+
+  <!-- MARKET VIEW TAB -->
+  <div id="tab-market" style="display:none">
+    <div class="gl-row" id="gl-row"></div>
+    <div class="chart-box">
+      <h3>Volatility Scores (All Stocks)</h3>
+      <canvas id="volChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentSymbol = null;
+let priceChartObj = null, returnChartObj = null, compareChartObj = null, volChartObj = null;
+const API = '';
+
+function showLoad(v) { document.getElementById('loading').style.display = v ? 'block' : 'none'; }
+
+async function fetchJSON(url) {
+  showLoad(true);
+  try { const r = await fetch(API + url); return await r.json(); }
+  finally { showLoad(false); }
+}
+
+// ── Init ──────────────────────────────────
+async function init() {
+  const res = await fetchJSON('/companies');
+  const list = document.getElementById('company-list');
+  const s1 = document.getElementById('cmp1');
+  const s2 = document.getElementById('cmp2');
+  list.innerHTML = '';
+  res.companies.forEach((c, i) => {
+    const el = document.createElement('div');
+    el.className = 'company-item';
+    el.innerHTML = `<div class="sym">${c.symbol}</div><div class="name">${c.name}</div>`;
+    el.onclick = () => selectStock(c.symbol, el);
+    list.appendChild(el);
+    const opt1 = new Option(c.symbol, c.symbol); s1.appendChild(opt1);
+    const opt2 = new Option(c.symbol, c.symbol); s2.appendChild(opt2);
+    if (i === 1) s2.value = c.symbol;
+  });
+  // Auto-select first
+  list.firstChild && list.firstChild.click();
+  loadMarketView();
+}
+
+// ── Stock Overview ────────────────────────
+async function selectStock(symbol, el) {
+  currentSymbol = symbol;
+  document.querySelectorAll('.company-item').forEach(x => x.classList.remove('active'));
+  el && el.classList.add('active');
+  document.getElementById('stock-title').textContent = symbol;
+  document.getElementById('last-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+
+  const [sumRes, dataRes] = await Promise.all([
+    fetchJSON(`/summary/${symbol}`),
+    fetchJSON(`/data/${symbol}?days=30`)
+  ]);
+  renderStats(sumRes.summary);
+  renderCharts(dataRes.data, symbol);
+}
+
+function renderStats(s) {
+  const changeColor = s.change >= 0 ? 'green' : 'red';
+  const changeSign = s.change >= 0 ? '+' : '';
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card">
+      <div class="label">Current Price</div>
+      <div class="value blue">₹${s.current_price.toLocaleString()}</div>
+      <div class="sub ${changeColor}">${changeSign}₹${s.change} (${changeSign}${s.change_pct}%)</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">52W High</div>
+      <div class="value green">₹${s.week52_high.toLocaleString()}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">52W Low</div>
+      <div class="value red">₹${s.week52_low.toLocaleString()}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Avg Close (1Y)</div>
+      <div class="value blue">₹${s.avg_close.toLocaleString()}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Volatility Score</div>
+      <div class="value yellow">${s.volatility_score}</div>
+      <div class="sub yellow">${s.volatility_score > 1.5 ? 'High Risk' : s.volatility_score > 0.8 ? 'Medium Risk' : 'Low Risk'}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Sentiment Index</div>
+      <div class="value ${s.sentiment_index >= 0 ? 'green' : 'red'}">${s.sentiment_index > 0 ? '+' : ''}${s.sentiment_index}</div>
+      <div class="sub ${s.sentiment_index >= 0 ? 'green' : 'red'}">${s.sentiment_index > 2 ? 'Bullish 🟢' : s.sentiment_index < -2 ? 'Bearish 🔴' : 'Neutral ⚪'}</div>
+    </div>
+  `;
+}
+
+function renderCharts(data, symbol) {
+  const labels = data.map(d => d.date.slice(5));
+  const closes = data.map(d => d.close);
+  const ma7    = data.map(d => d.ma_7);
+  const returns = data.map(d => d.daily_return);
+
+  if (priceChartObj) priceChartObj.destroy();
+  priceChartObj = new Chart(document.getElementById('priceChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: symbol, data: closes, borderColor: '#58a6ff', tension: 0.3, fill: true, backgroundColor: 'rgba(88,166,255,0.08)', pointRadius: 2 },
+        { label: 'MA7',  data: ma7,    borderColor: '#d29922', tension: 0.3, fill: false, borderDash: [4,3], pointRadius: 0 },
+      ]
+    },
+    options: { plugins: { legend: { labels: { color: '#e6edf3' } } }, scales: { x: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } }, y: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } } } }
+  });
+
+  if (returnChartObj) returnChartObj.destroy();
+  returnChartObj = new Chart(document.getElementById('returnChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Daily Return %',
+        data: returns,
+        backgroundColor: returns.map(v => v >= 0 ? 'rgba(63,185,80,0.7)' : 'rgba(248,81,73,0.7)'),
+      }]
+    },
+    options: { plugins: { legend: { labels: { color: '#e6edf3' } } }, scales: { x: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } }, y: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } } } }
+  });
+}
+
+async function loadChart(days, btn) {
+  document.querySelectorAll('.chart-controls .btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (!currentSymbol) return;
+  const res = await fetchJSON(`/data/${currentSymbol}?days=${days}`);
+  renderCharts(res.data, currentSymbol);
+}
+
+// ── Compare Tab ───────────────────────────
+async function runCompare() {
+  const s1 = document.getElementById('cmp1').value;
+  const s2 = document.getElementById('cmp2').value;
+  const days = document.getElementById('cmpDays').value;
+  const res = await fetchJSON(`/compare?symbol1=${s1}&symbol2=${s2}&days=${days}`);
+
+  document.getElementById('cmpTitle').textContent = `${s1} vs ${s2} — ${days} Days`;
+
+  if (compareChartObj) compareChartObj.destroy();
+  compareChartObj = new Chart(document.getElementById('compareChart'), {
+    type: 'line',
+    data: {
+      labels: res.stock1.dates.map(d => d.slice(5)),
+      datasets: [
+        { label: s1, data: res.stock1.closes, borderColor: '#58a6ff', tension: 0.3, fill: false, pointRadius: 2 },
+        { label: s2, data: res.stock2.closes, borderColor: '#a371f7', tension: 0.3, fill: false, pointRadius: 2 },
+      ]
+    },
+    options: { plugins: { legend: { labels: { color: '#e6edf3' } } }, scales: { x: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } }, y: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } } } }
+  });
+
+  const mkCard = (s, color) => `
+    <div class="compare-card">
+      <h4 style="color:${color}">${s.symbol} — ${s.name}</h4>
+      <div class="gl-item"><span>Start Price</span><span>₹${s.start_price}</span></div>
+      <div class="gl-item"><span>End Price</span><span>₹${s.end_price}</span></div>
+      <div class="gl-item"><span>Return</span><span class="${s.return_pct >= 0 ? 'green' : 'red'}">${s.return_pct > 0 ? '+' : ''}${s.return_pct}%</span></div>
+      <div class="gl-item"><span>Avg Volume</span><span>${(s.avg_volume / 1e5).toFixed(1)}L</span></div>
+      <div class="gl-item"><span>Volatility</span><span class="yellow">${s.volatility}</span></div>
+    </div>`;
+  document.getElementById('cmp-stats').innerHTML = mkCard(res.stock1, '#58a6ff') + mkCard(res.stock2, '#a371f7');
+
+  if (res.correlation !== null) {
+    const c = res.correlation;
+    const color = c > 0.3 ? '#3fb950' : c < -0.3 ? '#f85149' : '#d29922';
+    document.getElementById('corr-box').innerHTML = `
+      <div class="compare-card">
+        <h4>Correlation Analysis</h4>
+        <div class="gl-item"><span>Coefficient</span><span style="color:${color};font-weight:700">${c}</span></div>
+        <div class="gl-item"><span>Interpretation</span><span style="color:${color}">${res.correlation > 0.7 ? 'Strong Positive — Move together' : res.correlation > 0.3 ? 'Moderate Positive' : res.correlation < -0.3 ? 'Negative — Diversification benefit!' : 'Weak Correlation'}</span></div>
+      </div>`;
+  }
+}
+
+// ── Market View Tab ───────────────────────
+async function loadMarketView() {
+  const [glRes, volRes] = await Promise.all([
+    fetchJSON('/gainers-losers?days=7'),
+    fetchJSON('/volatility')
+  ]);
+
+  const mkGLItem = (s, isGainer) => `
+    <div class="gl-item">
+      <span><b>${s.symbol}</b> <span style="color:var(--muted);font-size:11px">${s.name.split(' ').slice(0,2).join(' ')}</span></span>
+      <span class="${isGainer ? 'green' : 'red'}">${s.return_pct > 0 ? '+' : ''}${s.return_pct}%</span>
+    </div>`;
+
+  document.getElementById('gl-row').innerHTML = `
+    <div class="gl-card">
+      <h4 class="green">🟢 Top Gainers (7D)</h4>
+      ${glRes.top_gainers.map(s => mkGLItem(s, true)).join('')}
+    </div>
+    <div class="gl-card">
+      <h4 class="red">🔴 Top Losers (7D)</h4>
+      ${glRes.top_losers.map(s => mkGLItem(s, false)).join('')}
+    </div>`;
+
+  const vols = volRes.volatility_scores;
+  if (volChartObj) volChartObj.destroy();
+  volChartObj = new Chart(document.getElementById('volChart'), {
+    type: 'bar',
+    data: {
+      labels: vols.map(v => v.symbol),
+      datasets: [{
+        label: 'Volatility Score',
+        data: vols.map(v => v.volatility_score),
+        backgroundColor: vols.map(v => v.risk_level === 'High' ? 'rgba(248,81,73,0.7)' : v.risk_level === 'Medium' ? 'rgba(210,153,34,0.7)' : 'rgba(63,185,80,0.7)'),
+      }]
+    },
+    options: { plugins: { legend: { labels: { color: '#e6edf3' } } }, scales: { x: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } }, y: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } } } }
+  });
+}
+
+// ── Tab Switching ─────────────────────────
+function switchTab(name) {
+  ['overview', 'compare', 'market'].forEach(t => {
+    document.getElementById(`tab-${t}`).style.display = t === name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach((el, i) => {
+    el.classList.toggle('active', ['overview','compare','market'][i] === name);
+  });
+}
+
+init();
+</script>
+</body>
+</html>
